@@ -1,18 +1,19 @@
 "use strict";
 
 const http = require("http");
-const util = require("./lib/util");
-const server = require("./lib/server");
+const util = require("../../lib/util");
+const server = require("../../lib/server");
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
 const compression = require("compression");
 const morgan = require("morgan");
+const serverless = require("serverless-http");
 
 server.init({});
 server.onRequest = server.onRequest.bind(server);
 
-morgan.token("request_id", function(req, res) {
+morgan.token("request_id", function (req, res) {
   const rhdr = process.env.REQUEST_ID_HEADER;
   if (rhdr && req.headers[rhdr]) {
     return req.headers[rhdr];
@@ -20,14 +21,14 @@ morgan.token("request_id", function(req, res) {
   return "unknown";
 });
 
-morgan.token("cache_type", function(req, res) {
+morgan.token("cache_type", function (req, res) {
   if (req.prerender) {
     return req.prerender.cacheHit ? "CACHE_HIT" : "CACHE_MISS";
   }
   return "-";
 });
 
-morgan.token("prerender_url", function(req, res) {
+morgan.token("prerender_url", function (req, res) {
   return (req.prerender && req.prerender.url) || "-";
 });
 
@@ -44,18 +45,18 @@ app.get("*", server.onRequest);
 //dont check content-type and just always try to parse body as json
 app.post("*", bodyParser.json({ type: () => true }), server.onRequest);
 
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
   res.status(500).end();
   util.log(`Unhandled request error error=${err} stack=${err.stack}`);
 });
 
-server.use(require("./lib/plugins/healthCheckAuth"));
-server.use(require("./lib/plugins/basicAuth"));
-server.use(require("./lib/plugins/blockResources"));
-server.use(require("./lib/plugins/blacklist"));
-server.use(require("./lib/plugins/removeScriptTags"));
-server.use(require("./lib/plugins/httpHeaders"));
-server.use(require("./lib/plugins/s3HtmlCache"));
+server.use(require("../../lib/plugins/healthCheckAuth"));
+// server.use(require("../../lib/plugins/basicAuth"));
+server.use(require("../../lib/plugins/blockResources"));
+server.use(require("../../lib/plugins/blacklist"));
+server.use(require("../../lib/plugins/removeScriptTags"));
+server.use(require("../../lib/plugins/httpHeaders"));
+// server.use(require("../../lib/plugins/s3HtmlCache"));
 
 server.start();
 
@@ -63,7 +64,9 @@ process.on("SIGHUP", () => {
   server.gracefulBrowserRestart();
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () =>
-  util.log(`Prerender server accepting requests on port ${port}`)
-);
+// const port = process.env.PORT || 3000;
+// app.listen(port, () =>
+//   util.log(`Prerender server accepting requests on port ${port}`)
+// );
+
+exports.handler = serverless(app);
